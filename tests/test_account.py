@@ -1,6 +1,6 @@
 import pytest
 
-from mm_trx.account import derive_accounts, generate_mnemonic, keccak256, pubkey_to_tron_address
+from mm_trx.account import derive_accounts, generate_mnemonic, pubkey_to_tron_address
 
 
 def test_generate_mnemonic_length():
@@ -12,13 +12,6 @@ def test_generate_mnemonic_length():
 def test_generate_mnemonic_invalid():
     with pytest.raises(ValueError):
         generate_mnemonic(13)
-
-
-def test_keccak256_known_vector():
-    """
-    Test keccak256 with a known input/output.
-    """
-    assert keccak256(b"hello").hex() == "1c8aff950685c2ed4bc3174f3472287b56d9517b9c948127319a09a7a36deac8"
 
 
 def test_pubkey_to_tron_address_invalid():

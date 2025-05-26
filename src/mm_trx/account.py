@@ -1,11 +1,14 @@
 from dataclasses import dataclass
 
 import base58
-from bip_utils import Bip32PathParser, Bip32Slip10Secp256k1, Bip39SeedGenerator
-from Crypto.Hash import keccak
+import eth_utils
+from eth_account import Account
+from eth_account.signers.local import LocalAccount
 from mnemonic import Mnemonic
 
 WORD_STRENGTH = {12: 128, 15: 160, 18: 192, 21: 224, 24: 256}
+
+Account.enable_unaudited_hdwallet_features()
 
 
 def generate_mnemonic(num_words: int = 24) -> str:
@@ -39,21 +42,6 @@ class DerivedAccount:
     private_key: str
 
 
-def keccak256(data: bytes) -> bytes:
-    """
-    Calculate Keccak-256 hash of input bytes.
-
-    Args:
-        data: Input bytes.
-
-    Returns:
-        32-byte Keccak-256 hash.
-    """
-    k = keccak.new(digest_bits=256)
-    k.update(data)
-    return k.digest()
-
-
 def pubkey_to_tron_address(pubkey_bytes: bytes) -> str:
     """
     Convert an uncompressed ECDSA secp256k1 public key to a Tron base58check address.
@@ -70,7 +58,7 @@ def pubkey_to_tron_address(pubkey_bytes: bytes) -> str:
     if len(pubkey_bytes) != 65 or pubkey_bytes[0] != 0x04:
         raise ValueError("pubkey_bytes must be uncompressed SEC1 public key (65 bytes, starts with 0x04)")
     pubkey_body = pubkey_bytes[1:]  # Remove 0x04 prefix.
-    digest = keccak256(pubkey_body)[-20:]
+    digest = eth_utils.keccak(pubkey_body)[-20:]
     tron_address_bytes = b"\x41" + digest
     return base58.b58encode_check(tron_address_bytes).decode()
 
@@ -95,24 +83,15 @@ def derive_accounts(
         ValueError: If mnemonic is not valid.
     """
     if "{i}" not in derivation_path:
-        raise ValueError("derivation_path must contain {i}, for example: m/44'/195'/0'/0/{i}")
+        raise ValueError("derivation_path must contain {i}, e.g. m/44'/195'/0'/0/{i}")
     if not Mnemonic("english").check(mnemonic):
-        raise ValueError("Mnemonic phrase is invalid.")
-    seed = Bip39SeedGenerator(mnemonic).Generate(passphrase)
-    master = Bip32Slip10Secp256k1.FromSeed(seed)
-
+        raise ValueError("Mnemonic is invalid")
     result: list[DerivedAccount] = []
-
     for i in range(limit):
         path = derivation_path.replace("{i}", str(i))
-        node = master
-        for idx in Bip32PathParser.Parse(path):
-            node = node.ChildKey(idx)
-
-        priv_key_hex = node.PrivateKey().Raw().ToHex()
-        pub_key_bytes = node.PublicKey().RawUncompressed().ToBytes()
-        address = pubkey_to_tron_address(pub_key_bytes)
-
+        acc: LocalAccount = Account.from_mnemonic(mnemonic, passphrase=passphrase, account_path=path)
+        pubkey_bytes = b"\x04" + acc._key_obj.public_key.to_bytes()  # noqa: SLF001
+        priv_key_hex = acc.key.hex()
+        address = pubkey_to_tron_address(pubkey_bytes)
         result.append(DerivedAccount(index=i, path=path, address=address, private_key=priv_key_hex))
-
     return result
