@@ -1,0 +1,87 @@
+[project]
+name = "mm-trx"
+version = "0.0.1"
+description = ""
+requires-python = ">=3.12"
+dependencies = [
+    "base58~=2.1.1",
+    "bip-utils~=2.9.3",
+    "mm-crypto-utils~=0.3.7",
+    "mnemonic==0.21",
+    "typer~=0.15.4",
+]
+[project.scripts]
+mm-sol = "mm_sol.cli.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest~=8.3.5",
+    "pytest-xdist~=3.6.1",
+    "ruff~=0.11.10",
+    "pip-audit~=2.9.0",
+    "bandit~=1.8.3",
+    "mypy~=1.15.0",
+    "pytest-asyncio~=1.0.0",
+    "pre-commit~=4.2.0",
+]
+
+[tool.mypy]
+python_version = "3.13"
+mypy_path = "stubs"
+warn_no_return = false
+implicit_reexport = true
+strict = true
+exclude = ["^tests/", "^tmp/"]
+[[tool.mypy.overrides]]
+module = ["bip_utils"]
+ignore_missing_imports = true
+
+
+[tool.ruff]
+line-length = 130
+target-version = "py313"
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "TC", # flake8-type-checking, TYPE_CHECKING is dangerous, for example it doesn't work with pydantic
+    "A005", # flake8-builtins: stdlib-module-shadowing
+    "ERA001", # eradicate: commented-out-code
+    "PT", # flake8-pytest-style
+    "D", # pydocstyle
+    "FIX", # flake8-fixme
+    "PLR0911", # pylint: too-many-return-statements
+    "PLR0912", # pylint: too-many-branches
+    "PLR0913", # pylint: too-many-arguments
+    "PLR2004", # pylint: magic-value-comparison
+    "PLC0414", # pylint: useless-import-alias
+    "FBT", # flake8-boolean-trap
+    "EM", # flake8-errmsg
+    "TRY003", # tryceratops: raise-vanilla-args
+    "C901", # mccabe: complex-structure,
+    "BLE001", # flake8-blind-except
+    "S311", # bandit: suspicious-non-cryptographic-random-usage
+    "TD002", # flake8-todos: missing-todo-author
+    "TD003", # flake8-todos: missing-todo-link
+    "RET503", # flake8-return: implicit-return
+    "COM812", # it's used in ruff formatter
+    "ASYNC109", # flake8-async: async-function-with-timeout
+]
+[tool.ruff.lint.pep8-naming]
+classmethod-decorators = ["field_validator"]
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["ANN", "S"]
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.bandit]
+exclude_dirs = ["tests"]
+skips = ["B311"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
